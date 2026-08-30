@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react'
 import { useState } from 'react'
 
 interface Props {
@@ -26,9 +27,11 @@ export function SearchBar({ valorInicial = '', onBuscar }: Props) {
       />
       <button
         type="submit"
-        className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700"
+        aria-label="Buscar"
+        title="Buscar"
+        className="rounded-lg bg-emerald-600 px-4 py-3 text-white hover:bg-emerald-700"
       >
-        Buscar
+        <Search size={20} />
       </button>
     </form>
   )

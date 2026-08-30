@@ -30,3 +30,7 @@ android
 # Local tooling config (dev-server preview helper)
 .claude/
 
+# Build artifacts generated on demand, not source
+*.apk
+*.aab
+

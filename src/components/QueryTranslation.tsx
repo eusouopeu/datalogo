@@ -1,6 +1,7 @@
+import { Check, Copy } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import type { FacetSelection, Indicador } from '../types'
-import { montarUrl } from '../lib/sidra'
+import { montarUrlConsulta } from '../lib/dados'
 import { UFS } from '../data/ufs'
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
 
 export function QueryTranslation({ indicador, selecao }: Props) {
   const [copiado, setCopiado] = useState(false)
-  const url = montarUrl(indicador, selecao)
+  const url = montarUrlConsulta(indicador, selecao)
 
   const localidadeLabel =
     selecao.nivelTerritorial === 'N1'
@@ -51,16 +52,20 @@ export function QueryTranslation({ indicador, selecao }: Props) {
         <dd>últimos {selecao.quantidadePeriodos}</dd>
       </dl>
 
-      <p className="mt-3 font-semibold text-emerald-800 dark:text-emerald-300">Consulta oficial (API do IBGE):</p>
+      <p className="mt-3 font-semibold text-emerald-800 dark:text-emerald-300">
+        Consulta oficial (API do {indicador.fonte}):
+      </p>
       <div className="mt-1 flex items-start gap-2">
         <code className="block flex-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-white px-2 py-1 text-xs dark:bg-slate-900">
           GET {url}
         </code>
         <button
           onClick={copiarUrl}
-          className="shrink-0 rounded-md border border-emerald-300 px-2 py-1 text-xs hover:bg-emerald-100 dark:border-emerald-800 dark:hover:bg-emerald-900"
+          aria-label={copiado ? 'Copiado' : 'Copiar'}
+          title={copiado ? 'Copiado' : 'Copiar'}
+          className="shrink-0 rounded-md border border-emerald-300 p-1.5 hover:bg-emerald-100 dark:border-emerald-800 dark:hover:bg-emerald-900"
         >
-          {copiado ? 'Copiado!' : 'Copiar'}
+          {copiado ? <Check size={16} /> : <Copy size={16} />}
         </button>
       </div>
       <a
@@ -69,7 +74,7 @@ export function QueryTranslation({ indicador, selecao }: Props) {
         rel="noreferrer"
         className="mt-2 inline-block text-xs text-emerald-700 underline dark:text-emerald-400"
       >
-        Ver tabela original no SIDRA/IBGE
+        Ver fonte original ({indicador.fonte})
       </a>
     </div>
   )

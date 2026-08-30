@@ -1,11 +1,14 @@
 import type { Indicador } from '../types'
 
 // Catálogo semântico de indicadores. Cada entrada traduz um conceito do
-// mundo real para os parâmetros reais da API de Agregados do IBGE (SIDRA).
-// Códigos verificados em servicodados.ibge.gov.br/api/v3/agregados/{id}/metadados
+// mundo real para os parâmetros reais de uma API pública (IBGE/SIDRA ou
+// BCB/SGS). Códigos verificados em:
+// - servicodados.ibge.gov.br/api/v3/agregados/{id}/metadados
+// - api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados
 export const CATALOGO: Indicador[] = [
   {
     id: 'taxa-desocupacao-idade',
+    origem: 'IBGE',
     fonte: 'IBGE',
     pesquisa: 'PNAD Contínua / ODS 8.5.2',
     nome: 'Taxa de desocupação por grupo de idade',
@@ -48,6 +51,7 @@ export const CATALOGO: Indicador[] = [
   },
   {
     id: 'ipca-variacao-mensal',
+    origem: 'IBGE',
     fonte: 'IBGE',
     pesquisa: 'Índice Nacional de Preços ao Consumidor Amplo (IPCA)',
     nome: 'IPCA - variação mensal',
@@ -64,6 +68,7 @@ export const CATALOGO: Indicador[] = [
   },
   {
     id: 'populacao-estimada',
+    origem: 'IBGE',
     fonte: 'IBGE',
     pesquisa: 'Estimativas de População',
     nome: 'População residente estimada',
@@ -79,6 +84,54 @@ export const CATALOGO: Indicador[] = [
       { nivel: 'N1', label: 'Brasil', requerSelecao: false },
       { nivel: 'N3', label: 'Unidade da Federação (UF)', requerSelecao: true },
     ],
+    classificacoes: [],
+  },
+  {
+    id: 'cambio-dolar',
+    origem: 'BCB',
+    fonte: 'BCB',
+    pesquisa: 'Séries Temporais do Banco Central (SGS)',
+    nome: 'Taxa de câmbio - Dólar americano (venda)',
+    descricao: 'Cotação diária do dólar americano (PTAX venda), em reais.',
+    tema: ['Economia', 'Câmbio'],
+    sinonimos: ['dolar', 'cambio', 'cotacao do dolar', 'preco do dolar', 'valor do dolar'],
+    unidade: 'R$',
+    periodicidade: 'diaria',
+    serieBcb: 1,
+    fonteUrl: 'https://www3.bcb.gov.br/sgspub/localizarseries/localizarSeries.do?method=prepararTelaLocalizarSeries',
+    niveisTerritoriais: [{ nivel: 'N1', label: 'Brasil', requerSelecao: false }],
+    classificacoes: [],
+  },
+  {
+    id: 'meta-selic',
+    origem: 'BCB',
+    fonte: 'BCB',
+    pesquisa: 'Séries Temporais do Banco Central (SGS)',
+    nome: 'Meta da taxa Selic definida pelo Copom',
+    descricao: 'Meta da taxa básica de juros da economia brasileira, definida pelo Comitê de Política Monetária (Copom).',
+    tema: ['Economia', 'Juros'],
+    sinonimos: ['selic', 'taxa de juros', 'juros basicos', 'taxa basica de juros', 'copom'],
+    unidade: '% a.a.',
+    periodicidade: 'diaria',
+    serieBcb: 432,
+    fonteUrl: 'https://www3.bcb.gov.br/sgspub/localizarseries/localizarSeries.do?method=prepararTelaLocalizarSeries',
+    niveisTerritoriais: [{ nivel: 'N1', label: 'Brasil', requerSelecao: false }],
+    classificacoes: [],
+  },
+  {
+    id: 'igpm-variacao-mensal',
+    origem: 'BCB',
+    fonte: 'BCB',
+    pesquisa: 'Séries Temporais do Banco Central (SGS)',
+    nome: 'IGP-M - variação mensal',
+    descricao: 'Variação mensal do Índice Geral de Preços do Mercado, usado como referência em contratos de aluguel.',
+    tema: ['Economia', 'Preços', 'Inflação'],
+    sinonimos: ['igpm', 'igp-m', 'reajuste de aluguel', 'indice de aluguel'],
+    unidade: '%',
+    periodicidade: 'mensal',
+    serieBcb: 189,
+    fonteUrl: 'https://www3.bcb.gov.br/sgspub/localizarseries/localizarSeries.do?method=prepararTelaLocalizarSeries',
+    niveisTerritoriais: [{ nivel: 'N1', label: 'Brasil', requerSelecao: false }],
     classificacoes: [],
   },
 ]

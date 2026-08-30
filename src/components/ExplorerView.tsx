@@ -1,3 +1,4 @@
+import { ArrowLeft, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { FacetSelection, Indicador, SerieResultado } from '../types'
 import { QueryBuilder } from './QueryBuilder'
@@ -5,7 +6,7 @@ import { QueryTranslation } from './QueryTranslation'
 import { DataTable } from './DataTable'
 import { ChartView } from './ChartView'
 import { AnalysisPanel } from './AnalysisPanel'
-import { buscarSerie } from '../lib/sidra'
+import { buscarSerieIndicador } from '../lib/dados'
 import { baixarCsv, serieParaCsv } from '../lib/csv'
 
 interface Props {
@@ -39,7 +40,7 @@ export function ExplorerView({ indicador, onVoltar }: Props) {
     let cancelado = false
     setCarregando(true)
     setErro(null)
-    buscarSerie(indicador, selecao)
+    buscarSerieIndicador(indicador, selecao)
       .then((res) => {
         if (!cancelado) setSeries(res)
       })
@@ -60,8 +61,13 @@ export function ExplorerView({ indicador, onVoltar }: Props) {
 
   return (
     <div className="flex flex-col gap-5 text-left">
-      <button onClick={onVoltar} className="w-fit text-sm text-emerald-700 hover:underline dark:text-emerald-400">
-        ← Voltar para a busca
+      <button
+        onClick={onVoltar}
+        aria-label="Voltar para a busca"
+        title="Voltar para a busca"
+        className="w-fit rounded-md p-2 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+      >
+        <ArrowLeft size={20} />
       </button>
 
       <div>
@@ -75,7 +81,7 @@ export function ExplorerView({ indicador, onVoltar }: Props) {
       {!prontoParaConsultar && (
         <p className="text-sm text-slate-500">Selecione uma localização para carregar os dados.</p>
       )}
-      {carregando && <p className="text-sm text-slate-500">Consultando API do IBGE…</p>}
+      {carregando && <p className="text-sm text-slate-500">Consultando API do {indicador.fonte}…</p>}
       {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
 
       {series && series.length > 0 && !carregando && (
@@ -84,9 +90,11 @@ export function ExplorerView({ indicador, onVoltar }: Props) {
             <h3 className="font-medium">Resultados</h3>
             <button
               onClick={() => baixarCsv(`${indicador.id}.csv`, serieParaCsv(series))}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              aria-label="Exportar CSV"
+              title="Exportar CSV"
+              className="rounded-md border border-slate-300 p-2 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
             >
-              Exportar CSV
+              <Download size={18} />
             </button>
           </div>
           <ChartView series={series} unidade={indicador.unidade} />

@@ -1,7 +1,10 @@
 @import 'tailwindcss';
 
+/* dark: passa a depender da classe .dark na raiz, não só do SO — permite alternar manualmente */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Montserrat', system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, Consolas, monospace;
 }
 
@@ -10,5 +13,5 @@
 }
 
 body {
-  @apply bg-white text-slate-800 dark:bg-slate-950 dark:text-slate-100;
+  @apply bg-white text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans leading-[1.5];
 }

@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react'
 import type { SearchMatch } from '../types'
 
 interface Props {
@@ -39,9 +40,11 @@ export function ResultsList({ resultados, consulta, onExplorar }: Props) {
             </div>
             <button
               onClick={() => onExplorar(match)}
-              className="shrink-0 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+              aria-label="Explorar"
+              title="Explorar"
+              className="shrink-0 rounded-md bg-emerald-600 p-2 text-white hover:bg-emerald-700"
             >
-              Explorar
+              <ArrowRight size={18} />
             </button>
           </div>
           <details className="mt-2 text-xs text-slate-500">

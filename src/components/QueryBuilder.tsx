@@ -14,6 +14,13 @@ const OPCOES_PERIODOS = [
   { valor: 20, label: 'Últimos 20' },
 ]
 
+const LABEL_PERIODICIDADE: Record<Indicador['periodicidade'], string> = {
+  diaria: 'diária',
+  mensal: 'mensal',
+  trimestral: 'trimestral',
+  anual: 'anual',
+}
+
 export function QueryBuilder({ indicador, selecao, onChange }: Props) {
   const nivelAtual = indicador.niveisTerritoriais.find((n) => n.nivel === selecao.nivelTerritorial)
 
@@ -92,7 +99,7 @@ export function QueryBuilder({ indicador, selecao, onChange }: Props) {
 
       <div>
         <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Período ({indicador.periodicidade})
+          Período ({LABEL_PERIODICIDADE[indicador.periodicidade]})
         </label>
         <div className="flex flex-wrap gap-2">
           {OPCOES_PERIODOS.map((opcao) => (

@@ -1,7 +1,7 @@
-import type { FacetSelection, Indicador, SerieResultado } from '../types'
+import type { FacetSelection, IndicadorIbge, SerieResultado } from '../types'
 
 /** Monta a URL real da API de Agregados do IBGE (SIDRA) a partir da seleção do usuário. */
-export function montarUrl(indicador: Indicador, selecao: FacetSelection): string {
+export function montarUrl(indicador: IndicadorIbge, selecao: FacetSelection): string {
   const base = `https://servicodados.ibge.gov.br/api/v3/agregados/${indicador.agregado}`
   const periodos = `periodos/-${selecao.quantidadePeriodos}`
   const variaveis = `variaveis/${indicador.variavel}`
@@ -41,7 +41,7 @@ interface RespostaSidra {
 }
 
 export async function buscarSerie(
-  indicador: Indicador,
+  indicador: IndicadorIbge,
   selecao: FacetSelection,
 ): Promise<SerieResultado[]> {
   const url = montarUrl(indicador, selecao)

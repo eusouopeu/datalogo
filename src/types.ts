@@ -19,7 +19,7 @@ export interface Classificacao {
   categorias: CategoriaClassificacao[]
 }
 
-export interface Indicador {
+interface IndicadorBase {
   id: string
   fonte: string
   pesquisa: string
@@ -29,13 +29,26 @@ export interface Indicador {
   tema: string[]
   sinonimos: string[]
   unidade: string
-  periodicidade: 'mensal' | 'trimestral' | 'anual'
-  agregado: number
-  variavel: number
+  periodicidade: 'diaria' | 'mensal' | 'trimestral' | 'anual'
   niveisTerritoriais: NivelTerritorialOpcao[]
   classificacoes: Classificacao[]
   fonteUrl: string
 }
+
+/** Indicador servido pela API de Agregados do IBGE (SIDRA). */
+export interface IndicadorIbge extends IndicadorBase {
+  origem: 'IBGE'
+  agregado: number
+  variavel: number
+}
+
+/** Indicador servido pela API de Séries Temporais do Banco Central (SGS). */
+export interface IndicadorBcb extends IndicadorBase {
+  origem: 'BCB'
+  serieBcb: number
+}
+
+export type Indicador = IndicadorIbge | IndicadorBcb
 
 export interface FacetSelection {
   nivelTerritorial: NivelTerritorial
