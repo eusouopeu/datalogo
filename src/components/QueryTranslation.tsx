@@ -1,5 +1,5 @@
-import { Check, Copy } from 'lucide-react'
-import { Fragment, useEffect, useState } from 'react'
+import { Calendar, Check, ChevronDown, Code2, Copy, Landmark, Link, MapPin, Search, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { FacetSelection, Indicador } from '../types'
 import { descreverRequisicao } from '../lib/dados'
 import { buscarMunicipios, buscarUfs, type Localidade } from '../lib/ibgeLocalidades'
@@ -7,10 +7,14 @@ import { buscarMunicipios, buscarUfs, type Localidade } from '../lib/ibgeLocalid
 interface Props {
   indicador: Indicador
   selecao: FacetSelection
+  linkCompartilhavel: string
 }
 
-export function QueryTranslation({ indicador, selecao }: Props) {
+/** Cartão de tradução da consulta: resumo em ícones + URL real da API. Accordion fechado por padrão. */
+export function QueryTranslation({ indicador, selecao, linkCompartilhavel }: Props) {
+  const [aberto, setAberto] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [linkCopiado, setLinkCopiado] = useState(false)
   const [localidades, setLocalidades] = useState<Localidade[]>([])
   const requisicao = descreverRequisicao(indicador, selecao)
 
@@ -29,13 +33,14 @@ export function QueryTranslation({ indicador, selecao }: Props) {
             .map((id) => localidades.find((l) => l.id === id)?.nome ?? id)
             .join(', ')
 
-  const linhasClassificacao = indicador.classificacoes.map((c) => {
-    const categoriaIds = selecao.categorias[c.id] ?? []
-    const nomes = categoriaIds
-      .map((id) => c.categorias.find((cat) => cat.id === id)?.nome)
-      .filter(Boolean)
-    return { nome: c.nome, valor: nomes.length > 0 ? nomes.join(', ') : 'não selecionado' }
-  })
+  const categoriasLabel = indicador.classificacoes
+    .map((c) => {
+      const categoriaIds = selecao.categorias[c.id] ?? []
+      const nomes = categoriaIds.map((id) => c.categorias.find((cat) => cat.id === id)?.nome).filter(Boolean)
+      return nomes.join(', ')
+    })
+    .filter(Boolean)
+    .join(' | ')
 
   const textoCopiavel =
     requisicao.metodo === 'GET'
@@ -48,53 +53,92 @@ export function QueryTranslation({ indicador, selecao }: Props) {
     setTimeout(() => setCopiado(false), 1500)
   }
 
-  return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-left text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
-      <p className="font-semibold text-emerald-800 dark:text-emerald-300">Você está consultando:</p>
-      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-        <dt className="text-slate-500">Fonte</dt>
-        <dd>{indicador.fonte}</dd>
-        <dt className="text-slate-500">Pesquisa</dt>
-        <dd>{indicador.pesquisa}</dd>
-        <dt className="text-slate-500">Indicador</dt>
-        <dd>{indicador.nome}</dd>
-        <dt className="text-slate-500">Localização</dt>
-        <dd>{localidadeLabel}</dd>
-        {linhasClassificacao.map((l) => (
-          <Fragment key={l.nome}>
-            <dt className="text-slate-500">{l.nome}</dt>
-            <dd>{l.valor}</dd>
-          </Fragment>
-        ))}
-        <dt className="text-slate-500">Período</dt>
-        <dd>últimos {selecao.quantidadePeriodos}</dd>
-      </dl>
+  async function compartilharLink() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: indicador.nome, url: linkCompartilhavel })
+        return
+      } catch {
+        // usuário cancelou o compartilhamento nativo — cai para copiar o link
+      }
+    }
+    await navigator.clipboard.writeText(linkCompartilhavel)
+    setLinkCopiado(true)
+    setTimeout(() => setLinkCopiado(false), 1500)
+  }
 
-      <p className="mt-3 font-semibold text-emerald-800 dark:text-emerald-300">
-        Consulta oficial (API do {indicador.fonte}):
-      </p>
-      <div className="mt-1 flex items-start gap-2">
-        <code className="block flex-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-white px-2 py-1 text-xs dark:bg-slate-900">
-          {requisicao.metodo} {requisicao.url}
-          {requisicao.corpo !== undefined && `\n${JSON.stringify(requisicao.corpo, null, 2)}`}
-        </code>
-        <button
-          onClick={copiarUrl}
-          aria-label={copiado ? 'Copiado' : 'Copiar'}
-          title={copiado ? 'Copiado' : 'Copiar'}
-          className="shrink-0 rounded-md border border-emerald-300 p-1.5 hover:bg-emerald-100 dark:border-emerald-800 dark:hover:bg-emerald-900"
-        >
-          {copiado ? <Check size={16} /> : <Copy size={16} />}
-        </button>
-      </div>
-      <a
-        href={indicador.fonteUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-2 inline-block text-xs text-emerald-700 underline dark:text-emerald-400"
+  return (
+    <div className="rounded-lg border border-emerald-200 text-left text-sm dark:border-emerald-900">
+      <button
+        type="button"
+        onClick={() => setAberto((a) => !a)}
+        className="flex w-full items-center justify-between gap-2 p-4"
       >
-        Ver fonte original ({indicador.fonte})
-      </a>
+        <span className="flex items-center gap-2 font-semibold text-emerald-900 dark:text-emerald-200">
+          <Code2 size={16} /> Ver consulta técnica
+        </span>
+        <ChevronDown size={18} className={`text-emerald-700 transition-transform dark:text-emerald-400 ${aberto ? 'rotate-180' : ''}`} />
+      </button>
+
+      {aberto && (
+        <div className="border-t border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <div className="flex flex-col gap-1.5 text-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-2">
+              <Search size={14} className="shrink-0 text-emerald-700 dark:text-emerald-400" />
+              <span>{indicador.pesquisa}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Landmark size={14} className="shrink-0 text-emerald-700 dark:text-emerald-400" />
+              <span>{indicador.fonte}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin size={14} className="shrink-0 text-emerald-700 dark:text-emerald-400" />
+              <span>{localidadeLabel}</span>
+            </div>
+            {categoriasLabel && (
+              <div className="flex items-center gap-2">
+                <Users size={14} className="shrink-0 text-emerald-700 dark:text-emerald-400" />
+                <span>{categoriasLabel}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="shrink-0 text-emerald-700 dark:text-emerald-400" />
+              <span>Últimos {selecao.quantidadePeriodos}</span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-start gap-2">
+            <code className="block flex-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-white px-2 py-1 text-xs dark:bg-slate-900">
+              {requisicao.metodo} {requisicao.url}
+              {requisicao.corpo !== undefined && `\n${JSON.stringify(requisicao.corpo, null, 2)}`}
+            </code>
+            <button
+              onClick={copiarUrl}
+              aria-label={copiado ? 'Copiado' : 'Copiar consulta'}
+              title={copiado ? 'Copiado' : 'Copiar consulta'}
+              className="shrink-0 rounded-md border border-emerald-300 p-1.5 hover:bg-emerald-100 dark:border-emerald-800 dark:hover:bg-emerald-900"
+            >
+              {copiado ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+            <button
+              onClick={compartilharLink}
+              aria-label={linkCopiado ? 'Link copiado' : 'Compartilhar esta consulta'}
+              title={linkCopiado ? 'Link copiado' : 'Compartilhar esta consulta'}
+              className="shrink-0 rounded-md border border-emerald-300 p-1.5 hover:bg-emerald-100 dark:border-emerald-800 dark:hover:bg-emerald-900"
+            >
+              {linkCopiado ? <Check size={16} /> : <Link size={16} />}
+            </button>
+          </div>
+          <a
+            href={indicador.fonteUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block text-xs text-emerald-700 underline dark:text-emerald-400"
+          >
+            Ver fonte original ({indicador.fonte})
+          </a>
+        </div>
+      )}
     </div>
   )
 }

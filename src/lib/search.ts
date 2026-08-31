@@ -20,10 +20,12 @@ export function buscarIndicadores(consulta: string): SearchMatch[] {
   const termos = tokenize(consulta)
   if (termos.length === 0) return []
 
+  const consultaNorm = normalize(consulta)
   const resultados: SearchMatch[] = []
 
   for (const indicador of CATALOGO) {
     let score = 0
+    let termosCasados = 0
     const motivos: string[] = []
 
     const nomeNorm = normalize(indicador.nome)
@@ -38,24 +40,28 @@ export function buscarIndicadores(consulta: string): SearchMatch[] {
       })),
     )
 
+    // Frase inteira bate com o nome ou um sinônimo do indicador: bônus além da soma por termo.
+    if (consultaNorm === nomeNorm || sinonimosNorm.includes(consultaNorm)) {
+      score += PESOS.correspondenciaExata
+      motivos.push(`"${consulta}" é correspondência exata do indicador`)
+    }
+
     for (const termo of termos) {
-      if (nomeNorm === termo) {
-        score += PESOS.correspondenciaExata
-        motivos.push(`"${termo}" é correspondência exata do indicador`)
-        continue
-      }
       if (sinonimosNorm.some((s) => s.includes(termo))) {
         score += PESOS.sinonimo
+        termosCasados++
         motivos.push(`"${termo}" corresponde a um sinônimo cadastrado`)
         continue
       }
       if (nomeNorm.includes(termo)) {
         score += PESOS.titulo
+        termosCasados++
         motivos.push(`"${termo}" aparece no título`)
         continue
       }
       if (descricaoNorm.includes(termo)) {
         score += PESOS.descricao
+        termosCasados++
         motivos.push(`"${termo}" aparece na descrição`)
         continue
       }
@@ -64,16 +70,21 @@ export function buscarIndicadores(consulta: string): SearchMatch[] {
       )
       if (categoriaAchada) {
         score += PESOS.categoria
+        termosCasados++
         motivos.push(`"${termo}" corresponde à categoria "${categoriaAchada.texto}"`)
         continue
       }
       if (temaNorm.some((t) => t.includes(termo)) || fonteNorm.includes(termo)) {
         score += PESOS.fonte
+        termosCasados++
         motivos.push(`"${termo}" corresponde ao tema ou fonte`)
       }
     }
 
-    if (score > 0) {
+    // Exige que a maioria dos termos da busca tenha casado com algo — evita que consultas
+    // com termos irrelevantes ("desemprego em marte") pontuem só pelo termo válido.
+    const cobertura = termosCasados / termos.length
+    if (score > 0 && cobertura >= 0.6) {
       resultados.push({ indicador, score, motivos })
     }
   }
