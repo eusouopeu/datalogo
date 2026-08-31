@@ -9,15 +9,15 @@ export function montarUrl(indicador: IndicadorIbge, selecao: FacetSelection): st
   const localidade =
     selecao.nivelTerritorial === 'N1'
       ? 'N1[all]'
-      : `${selecao.nivelTerritorial}[${selecao.codigoTerritorial}]`
+      : `${selecao.nivelTerritorial}[${selecao.codigosTerritoriais.join(',')}]`
 
   const params = new URLSearchParams()
   params.set('localidades', localidade)
 
   const classificacaoPartes = indicador.classificacoes
     .map((c) => {
-      const categoriaId = selecao.categorias[c.id]
-      return categoriaId ? `${c.id}[${categoriaId}]` : null
+      const categoriaIds = selecao.categorias[c.id]
+      return categoriaIds && categoriaIds.length > 0 ? `${c.id}[${categoriaIds.join(',')}]` : null
     })
     .filter(Boolean)
   if (classificacaoPartes.length > 0) {

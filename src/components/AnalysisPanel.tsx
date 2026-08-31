@@ -7,12 +7,11 @@ interface Props {
   unidade: string
 }
 
-type Receita = 'descrever' | 'comparar' | 'evolucao'
+type Receita = 'resumo' | 'comparar'
 
 const ABAS: { id: Receita; label: string }[] = [
-  { id: 'descrever', label: 'Descrever' },
+  { id: 'resumo', label: 'Resumo' },
   { id: 'comparar', label: 'Comparar / Ranking' },
-  { id: 'evolucao', label: 'Evolução' },
 ]
 
 function fmt(n: number): string {
@@ -20,7 +19,7 @@ function fmt(n: number): string {
 }
 
 export function AnalysisPanel({ series, unidade }: Props) {
-  const [aba, setAba] = useState<Receita>('descrever')
+  const [aba, setAba] = useState<Receita>('resumo')
 
   return (
     <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
@@ -41,16 +40,17 @@ export function AnalysisPanel({ series, unidade }: Props) {
       </div>
 
       <div className="mt-3 text-sm">
-        {aba === 'descrever' && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {aba === 'resumo' && (
+          <div className="flex flex-col gap-3">
             {series.map((serie) => {
               const stats = descrever(serie)
+              const evolucao = calcularEvolucao(serie)
               const rotulo = [serie.localidadeNome, ...serie.categoriaLabels].filter(Boolean).join(' / ')
               if (!stats) return null
               return (
                 <div key={rotulo} className="rounded-md bg-slate-50 p-3 dark:bg-slate-900">
                   <p className="font-medium">{rotulo}</p>
-                  <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-slate-600 dark:text-slate-300">
+                  <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-slate-600 dark:text-slate-300 sm:grid-cols-3">
                     <dt>Média</dt>
                     <dd>{fmt(stats.media)} {unidade}</dd>
                     <dt>Mediana</dt>
@@ -64,6 +64,14 @@ export function AnalysisPanel({ series, unidade }: Props) {
                     <dt>Desvio-padrão</dt>
                     <dd>{fmt(stats.desvioPadrao)} {unidade}</dd>
                   </dl>
+                  {evolucao && (
+                    <p className="mt-2 text-slate-600 dark:text-slate-300">
+                      Evolução de {evolucao.primeiroPeriodo} ({fmt(evolucao.valorInicial)} {unidade}) a{' '}
+                      {evolucao.ultimoPeriodo} ({fmt(evolucao.valorFinal)} {unidade}): variação de{' '}
+                      {fmt(evolucao.variacaoAbsoluta)} {unidade} ({fmt(evolucao.variacaoPercentual)}%)
+                      {evolucao.cagr !== null && <> · CAGR {fmt(evolucao.cagr)}% ao período</>}
+                    </p>
+                  )}
                 </div>
               )
             })}
@@ -83,32 +91,10 @@ export function AnalysisPanel({ series, unidade }: Props) {
             ))}
             {series.length < 2 && (
               <p className="text-slate-500">
-                Selecione mais de uma série (ex: mais de uma UF) para comparar.
+                Selecione mais de uma localidade ou categoria para comparar/ranquear.
               </p>
             )}
           </ol>
-        )}
-
-        {aba === 'evolucao' && (
-          <div className="flex flex-col gap-3">
-            {series.map((serie) => {
-              const evolucao = calcularEvolucao(serie)
-              const rotulo = [serie.localidadeNome, ...serie.categoriaLabels].filter(Boolean).join(' / ')
-              if (!evolucao) return null
-              return (
-                <div key={rotulo} className="rounded-md bg-slate-50 p-3 dark:bg-slate-900">
-                  <p className="font-medium">{rotulo}</p>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    De {evolucao.primeiroPeriodo} ({fmt(evolucao.valorInicial)} {unidade}) a{' '}
-                    {evolucao.ultimoPeriodo} ({fmt(evolucao.valorFinal)} {unidade}):{' '}
-                    variação de {fmt(evolucao.variacaoAbsoluta)} {unidade} (
-                    {fmt(evolucao.variacaoPercentual)}%)
-                    {evolucao.cagr !== null && <> · CAGR {fmt(evolucao.cagr)}% ao período</>}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
         )}
       </div>
     </div>

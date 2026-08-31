@@ -1,8 +1,8 @@
 import { Check, Copy } from 'lucide-react'
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import type { FacetSelection, Indicador } from '../types'
-import { montarUrlConsulta } from '../lib/dados'
-import { UFS } from '../data/ufs'
+import { descreverRequisicao } from '../lib/dados'
+import { buscarMunicipios, buscarUfs, type Localidade } from '../lib/ibgeLocalidades'
 
 interface Props {
   indicador: Indicador
@@ -11,21 +11,39 @@ interface Props {
 
 export function QueryTranslation({ indicador, selecao }: Props) {
   const [copiado, setCopiado] = useState(false)
-  const url = montarUrlConsulta(indicador, selecao)
+  const [localidades, setLocalidades] = useState<Localidade[]>([])
+  const requisicao = descreverRequisicao(indicador, selecao)
+
+  useEffect(() => {
+    if (selecao.nivelTerritorial === 'N3') buscarUfs().then(setLocalidades)
+    else if (selecao.nivelTerritorial === 'N6') buscarMunicipios().then(setLocalidades)
+    // Para N1/N2 a lista não é usada (localidadeLabel resolve para "Brasil" antes de lê-la).
+  }, [selecao.nivelTerritorial])
 
   const localidadeLabel =
     selecao.nivelTerritorial === 'N1'
       ? 'Brasil'
-      : UFS.find((u) => String(u.id) === selecao.codigoTerritorial)?.nome ?? '—'
+      : selecao.codigosTerritoriais.length === 0
+        ? 'nenhuma selecionada'
+        : selecao.codigosTerritoriais
+            .map((id) => localidades.find((l) => l.id === id)?.nome ?? id)
+            .join(', ')
 
   const linhasClassificacao = indicador.classificacoes.map((c) => {
-    const categoriaId = selecao.categorias[c.id]
-    const categoria = c.categorias.find((cat) => cat.id === categoriaId)
-    return { nome: c.nome, valor: categoria?.nome ?? 'não selecionado' }
+    const categoriaIds = selecao.categorias[c.id] ?? []
+    const nomes = categoriaIds
+      .map((id) => c.categorias.find((cat) => cat.id === id)?.nome)
+      .filter(Boolean)
+    return { nome: c.nome, valor: nomes.length > 0 ? nomes.join(', ') : 'não selecionado' }
   })
 
+  const textoCopiavel =
+    requisicao.metodo === 'GET'
+      ? requisicao.url
+      : `${requisicao.url}\n${JSON.stringify(requisicao.corpo, null, 2)}`
+
   async function copiarUrl() {
-    await navigator.clipboard.writeText(url)
+    await navigator.clipboard.writeText(textoCopiavel)
     setCopiado(true)
     setTimeout(() => setCopiado(false), 1500)
   }
@@ -57,7 +75,8 @@ export function QueryTranslation({ indicador, selecao }: Props) {
       </p>
       <div className="mt-1 flex items-start gap-2">
         <code className="block flex-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-white px-2 py-1 text-xs dark:bg-slate-900">
-          GET {url}
+          {requisicao.metodo} {requisicao.url}
+          {requisicao.corpo !== undefined && `\n${JSON.stringify(requisicao.corpo, null, 2)}`}
         </code>
         <button
           onClick={copiarUrl}
