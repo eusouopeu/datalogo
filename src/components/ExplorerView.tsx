@@ -1,4 +1,4 @@
-import { ArrowLeft, BookmarkPlus, Check, Download, HardDriveDownload, ImageDown, LineChart, RefreshCw, Sigma, Star, Table2, Trash2 } from 'lucide-react'
+import { ArrowLeft, BookmarkPlus, Check, Download, Flag, HardDriveDownload, ImageDown, LineChart, RefreshCw, Sigma, Star, Table2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { FacetSelection, Indicador } from '../types'
 import { QueryBuilder } from './QueryBuilder'
@@ -69,6 +69,7 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
   const [visualizacao, setVisualizacao] = useState<Visualizacao>('grafico')
   const [exportando, setExportando] = useState(false)
   const [painelSalvo, setPainelSalvo] = useState(false)
+  const [mostrarEventos, setMostrarEventos] = useState(false)
 
   const nivelInfo = indicador.niveisTerritoriais.find((n) => n.nivel === selecao.nivelTerritorial)
   const prontoParaConsultar = !nivelInfo?.requerSelecao || selecao.codigosTerritoriais.length > 0
@@ -200,7 +201,7 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
                 </button>
               ))}
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-row gap-2">
               {visualizacao === 'grafico' && (
                 <button
                   onClick={exportarPng}
@@ -237,7 +238,12 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
           </div>
 
           {visualizacao === 'grafico' && (
-            <ChartView series={series} unidade={indicador.unidade} periodicidade={indicador.periodicidade} />
+            <ChartView
+              series={series}
+              unidade={indicador.unidade}
+              periodicidade={indicador.periodicidade}
+              mostrarEventos={mostrarEventos}
+            />
           )}
           {visualizacao === 'tabela' && <DataTable series={series} unidade={indicador.unidade} />}
           {visualizacao === 'analise' && <AnalysisPanel series={series} unidade={indicador.unidade} />}
@@ -263,7 +269,21 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
           )}
 
           {visualizacao === 'grafico' && series[0] && (
-            <CompareInline indicadorAtual={indicador} serieAtual={series[0]} />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMostrarEventos((v) => !v)}
+                aria-label={mostrarEventos ? 'Ocultar eventos históricos' : 'Mostrar eventos históricos'}
+                title={mostrarEventos ? 'Ocultar eventos históricos' : 'Mostrar eventos históricos'}
+                className={`shrink-0 rounded-md border p-2 ${
+                  mostrarEventos
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400'
+                    : 'border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Flag size={16} />
+              </button>
+              <CompareInline indicadorAtual={indicador} serieAtual={series[0]} />
+            </div>
           )}
         </>
       )}

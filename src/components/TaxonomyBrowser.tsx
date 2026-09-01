@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Briefcase, ChevronLeft, ChevronRight, HeartPulse, Map, TrendingUp, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { Indicador } from '../types'
 import { agruparPorTema } from '../lib/search'
@@ -7,7 +7,15 @@ interface Props {
   onSelecionar: (indicador: Indicador) => void
 }
 
-/** Navegação por Tema > Subtema, para quem não sabe o nome exato do indicador que procura. */
+const ICONE_POR_TEMA: Record<string, typeof Briefcase> = {
+  Trabalho: Briefcase,
+  Economia: TrendingUp,
+  Demografia: Users,
+  Geografia: Map,
+  Saúde: HeartPulse,
+}
+
+/** Navegação por Tema > Subtema, para quem não sabe o nome exato do indicador que procura — pílulas só com ícone. */
 export function TaxonomyBrowser({ onSelecionar }: Props) {
   const grupos = useMemo(() => agruparPorTema(), [])
   const [temaAtivo, setTemaAtivo] = useState<string | null>(null)
@@ -19,15 +27,20 @@ export function TaxonomyBrowser({ onSelecionar }: Props) {
           Ou navegue por tema
         </p>
         <div className="flex flex-wrap gap-2">
-          {Array.from(grupos.keys()).map((tema) => (
-            <button
-              key={tema}
-              onClick={() => setTemaAtivo(tema)}
-              className="rounded-full bg-slate-100 px-4 py-1.5 text-sm text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            >
-              {tema}
-            </button>
-          ))}
+          {Array.from(grupos.keys()).map((tema) => {
+            const Icone = ICONE_POR_TEMA[tema] ?? Map
+            return (
+              <button
+                key={tema}
+                onClick={() => setTemaAtivo(tema)}
+                aria-label={tema}
+                title={tema}
+                className="rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <Icone size={18} />
+              </button>
+            )
+          })}
         </div>
       </div>
     )

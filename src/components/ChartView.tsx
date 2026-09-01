@@ -1,4 +1,3 @@
-import { Flag } from 'lucide-react'
 import { useState } from 'react'
 import {
   Area,
@@ -24,6 +23,7 @@ interface Props {
   series: SerieResultado[]
   unidade: string
   periodicidade: Indicador['periodicidade']
+  mostrarEventos: boolean
 }
 
 const CORES = ['#059669', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2']
@@ -36,10 +36,9 @@ const OPCOES_TIPO = [
   { valor: 'area' as const, label: 'Área' },
 ]
 
-export function ChartView({ series, unidade, periodicidade }: Props) {
+export function ChartView({ series, unidade, periodicidade, mostrarEventos }: Props) {
   const [tipo, setTipo] = useState<TipoGrafico>('linha')
   const [transformacao, setTransformacao] = useState<Transformacao>('nenhuma')
-  const [mostrarEventos, setMostrarEventos] = useState(false)
 
   // Acumulado 12m só faz sentido para variação mensal (%) — outras periodicidades ficam só com média móvel.
   const opcoesTransformacao =
@@ -88,18 +87,6 @@ export function ChartView({ series, unidade, periodicidade }: Props) {
         <div className="w-40">
           <SingleSelectDropdown label="Tipo de gráfico" opcoes={OPCOES_TIPO} valor={tipo} onChange={setTipo} />
         </div>
-        <button
-          onClick={() => setMostrarEventos((v) => !v)}
-          aria-label={mostrarEventos ? 'Ocultar eventos históricos' : 'Mostrar eventos históricos'}
-          title={mostrarEventos ? 'Ocultar eventos históricos' : 'Mostrar eventos históricos'}
-          className={`rounded-md border p-2 ${
-            mostrarEventos
-              ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400'
-              : 'border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Flag size={18} />
-        </button>
       </div>
       <div id="datalogo-chart" className="h-72 w-full rounded-lg border border-slate-200 p-3 dark:border-slate-800">
         <ResponsiveContainer width="100%" height="100%">
