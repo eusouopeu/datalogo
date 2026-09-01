@@ -26,7 +26,7 @@ export function TaxonomyBrowser({ onSelecionar }: Props) {
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
           Ou navegue por tema
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="inline-flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
           {Array.from(grupos.keys()).map((tema) => {
             const Icone = ICONE_POR_TEMA[tema] ?? Map
             return (
@@ -35,7 +35,7 @@ export function TaxonomyBrowser({ onSelecionar }: Props) {
                 onClick={() => setTemaAtivo(tema)}
                 aria-label={tema}
                 title={tema}
-                className="rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="rounded-full p-2.5 text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700"
               >
                 <Icone size={18} />
               </button>
