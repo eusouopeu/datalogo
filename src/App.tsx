@@ -120,13 +120,15 @@ export default function App() {
         {navegacao.tela === 'busca' && (
           <div className="flex flex-col gap-6">
             <SearchBar valorInicial={consulta} onBuscar={setConsulta} />
-            <ResultsList
-              resultados={resultados}
-              consulta={consulta}
-              favoritos={favoritos}
-              onExplorar={(match) => abrirIndicador(match.indicador)}
-              onAlternarFavorito={(id) => setFavoritos(alternarFavorito(id))}
-            />
+            {consulta && (
+              <ResultsList
+                resultados={resultados}
+                consulta={consulta}
+                favoritos={favoritos}
+                onExplorar={(match) => abrirIndicador(match.indicador)}
+                onAlternarFavorito={(id) => setFavoritos(alternarFavorito(id))}
+              />
+            )}
             {!consulta && (
               <div className="flex flex-col gap-6">
                 <Destaques onExplorar={abrirIndicador} />

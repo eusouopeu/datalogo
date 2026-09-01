@@ -24,7 +24,7 @@ export function TaxonomyBrowser({ onSelecionar }: Props) {
   const indicadores = temaAtivo ? (grupos.get(temaAtivo) ?? []) : []
 
   return (
-    <div className="mt-6">
+    <div className="mt-6 flex flex-col items-center">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
         Ou navegue por tema
       </p>
@@ -51,7 +51,7 @@ export function TaxonomyBrowser({ onSelecionar }: Props) {
         })}
       </div>
       {temaAtivo && (
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul className="mt-3 flex w-full flex-col gap-2">
           {indicadores.map((indicador) => (
             <li key={indicador.id}>
               <button
