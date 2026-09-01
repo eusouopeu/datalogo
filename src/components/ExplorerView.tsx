@@ -1,5 +1,5 @@
-import { ArrowLeft, BookmarkPlus, Check, Download, ImageDown, LineChart, RefreshCw, Sigma, Star, Table2 } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, BookmarkPlus, Check, Download, HardDriveDownload, ImageDown, LineChart, RefreshCw, Sigma, Star, Table2, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { FacetSelection, Indicador } from '../types'
 import { QueryBuilder } from './QueryBuilder'
 import { QueryTranslation } from './QueryTranslation'
@@ -7,11 +7,14 @@ import { DataTable } from './DataTable'
 import { ChartView } from './ChartView'
 import { AnalysisPanel } from './AnalysisPanel'
 import { CompareInline } from './CompareInline'
-import { useSerie } from '../lib/useSerie'
+import { chaveCache, useSerie } from '../lib/useSerie'
 import { serieParaCsv } from '../lib/csv'
 import { salvarCsv, salvarImagemPng, svgParaPngDataUrl } from '../lib/exportar'
 import { estadoParaParams } from '../lib/urlState'
 import { salvarPainel } from '../lib/paineis'
+import { compararUltimoValor } from '../lib/analysis'
+import { lerOffline, removerOffline, salvarOffline } from '../lib/offline'
+import type { SerieResultado } from '../types'
 
 interface Props {
   indicador: Indicador
@@ -35,6 +38,33 @@ function ultimoPeriodoDisponivel(series: { pontos: { periodo: string; valor: num
   return periodos.length > 0 ? periodos.sort().at(-1)! : null
 }
 
+/** Resumo de ranking exibido direto sob o gráfico quando há mais de uma localidade/categoria selecionada. */
+function RankingResumo({ series, unidade }: { series: SerieResultado[]; unidade: string }) {
+  if (series.length < 2) return null
+  const ranking = compararUltimoValor(series)
+  if (ranking.length < 2) return null
+  return (
+    <div className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        Ranking (valor mais recente)
+      </p>
+      <ol className="flex flex-col gap-1">
+        {ranking.map((item, i) => (
+          <li key={item.rotulo} className="flex justify-between">
+            <span>
+              <span className="mr-2 text-slate-400">{i + 1}ª</span>
+              {item.rotulo}
+            </span>
+            <span className="font-medium">
+              {item.valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} {unidade}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
 export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, favorito, onAlternarFavorito }: Props) {
   const [visualizacao, setVisualizacao] = useState<Visualizacao>('grafico')
   const [exportando, setExportando] = useState(false)
@@ -43,7 +73,28 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
   const nivelInfo = indicador.niveisTerritoriais.find((n) => n.nivel === selecao.nivelTerritorial)
   const prontoParaConsultar = !nivelInfo?.requerSelecao || selecao.codigosTerritoriais.length > 0
 
-  const { series, carregando, erro, consultadoEm, desatualizado, recarregar } = useSerie(indicador, selecao, prontoParaConsultar)
+  const { series, carregando, erro, consultadoEm, desatualizado, deOffline, recarregar } = useSerie(
+    indicador,
+    selecao,
+    prontoParaConsultar,
+  )
+
+  const chaveOffline = chaveCache(indicador, selecao)
+  const [salvoOffline, setSalvoOffline] = useState(() => lerOffline(chaveOffline) !== null)
+
+  useEffect(() => {
+    setSalvoOffline(lerOffline(chaveOffline) !== null)
+  }, [chaveOffline])
+
+  function alternarOffline() {
+    if (salvoOffline) {
+      removerOffline(chaveOffline)
+      setSalvoOffline(false)
+    } else if (series) {
+      salvarOffline(chaveOffline, series)
+      setSalvoOffline(true)
+    }
+  }
 
   async function exportarCsv() {
     if (!series) return
@@ -170,6 +221,18 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
               >
                 <Download size={18} />
               </button>
+              <button
+                onClick={alternarOffline}
+                aria-label={salvoOffline ? 'Remover uso offline' : 'Salvar para uso offline'}
+                title={salvoOffline ? 'Remover uso offline' : 'Salvar para uso offline'}
+                className={`rounded-md border p-2 ${
+                  salvoOffline
+                    ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30'
+                    : 'border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
+                }`}
+              >
+                {salvoOffline ? <Trash2 size={18} /> : <HardDriveDownload size={18} />}
+              </button>
             </div>
           </div>
 
@@ -179,6 +242,8 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
           {visualizacao === 'tabela' && <DataTable series={series} unidade={indicador.unidade} />}
           {visualizacao === 'analise' && <AnalysisPanel series={series} unidade={indicador.unidade} />}
 
+          {visualizacao === 'grafico' && <RankingResumo series={series} unidade={indicador.unidade} />}
+
           {(consultadoEm || ultimoPeriodo) && (
             <p className="text-xs text-slate-400">
               {ultimoPeriodo && <>Último período disponível: {ultimoPeriodo}. </>}
@@ -186,6 +251,12 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
               {desatualizado && (
                 <span className="ml-1 text-amber-600 dark:text-amber-400">
                   — sem conexão: mostrando dado de {new Date(consultadoEm ?? Date.now()).toLocaleDateString('pt-BR')}.
+                </span>
+              )}
+              {deOffline && (
+                <span className="ml-1 text-emerald-600 dark:text-emerald-400">
+                  — sem conexão: mostrando dado salvo offline em{' '}
+                  {new Date(consultadoEm ?? Date.now()).toLocaleDateString('pt-BR')}.
                 </span>
               )}
             </p>

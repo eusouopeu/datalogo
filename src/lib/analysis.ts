@@ -38,8 +38,6 @@ export interface Evolucao {
   valorFinal: number
   variacaoAbsoluta: number
   variacaoPercentual: number
-  /** taxa de crescimento composta anualizada, assumindo períodos igualmente espaçados */
-  cagr: number | null
 }
 
 export function calcularEvolucao(serie: SerieResultado): Evolucao | null {
@@ -51,12 +49,6 @@ export function calcularEvolucao(serie: SerieResultado): Evolucao | null {
   const variacaoAbsoluta = ultimo.valor - primeiro.valor
   const variacaoPercentual = primeiro.valor !== 0 ? (variacaoAbsoluta / Math.abs(primeiro.valor)) * 100 : NaN
 
-  const numPeriodos = pontos.length - 1
-  const cagr =
-    primeiro.valor > 0 && ultimo.valor > 0
-      ? (Math.pow(ultimo.valor / primeiro.valor, 1 / numPeriodos) - 1) * 100
-      : null
-
   return {
     primeiroPeriodo: primeiro.periodo,
     ultimoPeriodo: ultimo.periodo,
@@ -64,7 +56,6 @@ export function calcularEvolucao(serie: SerieResultado): Evolucao | null {
     valorFinal: ultimo.valor,
     variacaoAbsoluta,
     variacaoPercentual,
-    cagr,
   }
 }
 

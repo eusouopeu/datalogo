@@ -2,16 +2,19 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FacetSelection, Indicador, SerieResultado } from '../types'
 import { buscarSerieIndicador } from './dados'
 import { estaExpirado, gravarCache, lerCache, ttlPorPeriodicidade } from './cache'
+import { lerOffline } from './offline'
 
-function chaveCache(indicador: Indicador, selecao: FacetSelection): string {
+export function chaveCache(indicador: Indicador, selecao: FacetSelection): string {
   return `serie:${indicador.id}:${JSON.stringify(selecao)}`
 }
 
-function mensagemErro(motivo: unknown): string {
+/** Mensagem de erro identificando a fonte (IBGE/BCB/SICONFI/Comex Stat) que falhou, para o usuário saber o que está fora do ar. */
+export function mensagemErro(fonte: string, motivo: unknown): string {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return 'Sem conexão com a internet. Verifique sua rede e tente novamente.'
   }
-  return motivo instanceof Error ? motivo.message : 'Erro desconhecido ao consultar a API.'
+  const detalhe = motivo instanceof Error ? motivo.message : 'erro desconhecido'
+  return `${fonte} fora do ar no momento (${detalhe}). Tente novamente em instantes.`
 }
 
 export interface EstadoSerie {
@@ -21,6 +24,8 @@ export interface EstadoSerie {
   consultadoEm: number | null
   /** true quando a revalidação falhou (ex: sem rede) mas os dados em tela vêm do cache local. */
   desatualizado: boolean
+  /** true quando os dados em tela vêm do armazenamento offline explícito (nem cache SWR fresco, nem rede disponível). */
+  deOffline: boolean
   recarregar: () => void
 }
 
@@ -34,6 +39,7 @@ export function useSerie(indicador: Indicador | null, selecao: FacetSelection | 
   const [erro, setErro] = useState<string | null>(null)
   const [consultadoEm, setConsultadoEm] = useState<number | null>(null)
   const [desatualizado, setDesatualizado] = useState(false)
+  const [deOffline, setDeOffline] = useState(false)
   const [tentativa, setTentativa] = useState(0)
 
   const chave = useMemo(
@@ -46,6 +52,7 @@ export function useSerie(indicador: Indicador | null, selecao: FacetSelection | 
       setSeries(null)
       setErro(null)
       setDesatualizado(false)
+      setDeOffline(false)
       return
     }
 
@@ -55,6 +62,7 @@ export function useSerie(indicador: Indicador | null, selecao: FacetSelection | 
       setConsultadoEm(cache.timestamp)
       setErro(null)
       setDesatualizado(false)
+      setDeOffline(false)
     }
 
     const ttl = ttlPorPeriodicidade(indicador.periodicidade)
@@ -75,7 +83,17 @@ export function useSerie(indicador: Indicador | null, selecao: FacetSelection | 
       })
       .catch((e) => {
         if (cancelado) return
-        if (!cache) setErro(mensagemErro(e))
+        if (!cache) {
+          const offline = lerOffline<SerieResultado[]>(chave)
+          if (offline) {
+            setSeries(offline.valor)
+            setConsultadoEm(offline.timestamp)
+            setDeOffline(true)
+            setErro(null)
+          } else {
+            setErro(mensagemErro(indicador.fonte, e))
+          }
+        }
         // com cache exibido em tela, a revalidação falhou em silêncio — mantém o que já foi mostrado, mas avisa que está desatualizado
         else setDesatualizado(true)
       })
@@ -88,5 +106,5 @@ export function useSerie(indicador: Indicador | null, selecao: FacetSelection | 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chave, ativo, tentativa])
 
-  return { series, carregando, erro, consultadoEm, desatualizado, recarregar: () => setTentativa((t) => t + 1) }
+  return { series, carregando, erro, consultadoEm, desatualizado, deOffline, recarregar: () => setTentativa((t) => t + 1) }
 }

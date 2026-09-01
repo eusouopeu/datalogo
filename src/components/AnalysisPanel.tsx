@@ -89,7 +89,6 @@ export function AnalysisPanel({ series, unidade }: Props) {
                       Evolução de {evolucao.primeiroPeriodo} ({fmt(evolucao.valorInicial)} {unidade}) a{' '}
                       {evolucao.ultimoPeriodo} ({fmt(evolucao.valorFinal)} {unidade}): variação de{' '}
                       {fmt(evolucao.variacaoAbsoluta)} {unidade} ({fmt(evolucao.variacaoPercentual)}%)
-                      {evolucao.cagr !== null && <> · CAGR {fmt(evolucao.cagr)}% ao período</>}
                     </p>
                   )}
                 </div>
