@@ -13,4 +13,11 @@ describe('buscarIndicadores', () => {
     const resultados = buscarIndicadores('desemprego xicara marte')
     expect(resultados).toEqual([])
   })
+
+  it('tolera um pequeno erro de digitação (distância de edição 1) no termo', () => {
+    // "inflaçao" (sem o acento certo não muda nada — normalize já remove acento) então
+    // usamos um erro real de dedo: "inflacao" -> "iflacao" (letra faltando).
+    const resultados = buscarIndicadores('iflacao')
+    expect(resultados.some((r) => r.indicador.id === 'ipca-variacao-mensal')).toBe(true)
+  })
 })

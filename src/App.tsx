@@ -6,6 +6,7 @@ import { ExplorerView } from './components/ExplorerView'
 import { TaxonomyBrowser } from './components/TaxonomyBrowser'
 import { Destaques } from './components/Destaques'
 import { FavoritosRecentes } from './components/FavoritosRecentes'
+import { AjustesView } from './components/AjustesView'
 import { PaineisSalvos } from './components/PaineisSalvos'
 import { buscarIndicadores } from './lib/search'
 import { useTheme } from './lib/theme'
@@ -143,15 +144,7 @@ export default function App() {
           <FavoritosRecentes favoritos={favoritos} recentes={recentes} onExplorar={abrirIndicador} />
         )}
 
-        {navegacao.tela === 'ajustes' && (
-          <div className="flex flex-col gap-6 text-sm text-slate-500 dark:text-slate-400">
-            <p>
-              Dados: IBGE (SIDRA), Banco Central (SGS), Tesouro Nacional (SICONFI) e Comex Stat (MDIC). Cálculos
-              executados localmente em TypeScript.
-            </p>
-            <p>Sem IA. Sem cadastro. Sem servidor.</p>
-          </div>
-        )}
+        {navegacao.tela === 'ajustes' && <AjustesView />}
 
         {navegacao.tela === 'explorar' && navegacao.indicador && navegacao.selecao && (
           <ExplorerView

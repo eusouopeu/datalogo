@@ -1,19 +1,33 @@
 import { Search } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   valorInicial?: string
   onBuscar: (consulta: string) => void
 }
 
+const DEBOUNCE_MS = 200
+
+/** Busca ao digitar (debounced) — sem esperar Enter/clique, já que a busca roda 100% local. */
 export function SearchBar({ valorInicial = '', onBuscar }: Props) {
   const [valor, setValor] = useState(valorInicial)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => onBuscar(valor), DEBOUNCE_MS)
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valor])
 
   return (
     <form
       className="flex w-full gap-2"
       onSubmit={(e) => {
         e.preventDefault()
+        if (timeoutRef.current) clearTimeout(timeoutRef.current)
         onBuscar(valor)
       }}
     >

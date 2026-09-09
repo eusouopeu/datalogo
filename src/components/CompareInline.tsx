@@ -14,6 +14,7 @@ import { CATALOGO } from '../data/catalog'
 import { selecaoInicial } from '../lib/facets'
 import { useSerie } from '../lib/useSerie'
 import { alinharPorPeriodo, normalizarBase100 } from '../lib/comparacao'
+import { correlacao, interpretarCorrelacao } from '../lib/analysis'
 import type { Indicador, SerieResultado } from '../types'
 import { SingleSelectDropdown } from './ui/Dropdown'
 
@@ -61,6 +62,8 @@ export function CompareInline({ indicadorAtual, serieAtual }: Props) {
       ? alinhado.map((p, i) => ({ periodo: p.periodo, a: baseA[i].valor, b: baseB[i].valor }))
       : []
 
+  const r = seriesB?.[0] ? correlacao(serieAtual, seriesB[0]) : null
+
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex items-center justify-between gap-2">
@@ -90,6 +93,13 @@ export function CompareInline({ indicadorAtual, serieAtual }: Props) {
       )}
       {carregando && <p className="text-sm text-slate-500">Consultando…</p>}
       {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+
+      {r !== null && indicadorB && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Correlação: <span className="font-medium text-slate-700 dark:text-slate-300">{r.toFixed(2)}</span> —{' '}
+          {interpretarCorrelacao(r)}.
+        </p>
+      )}
 
       {dados.length > 0 && indicadorB && (
         <div className="h-64 w-full">

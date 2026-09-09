@@ -102,3 +102,13 @@ export function correlacao(serieA: SerieResultado, serieB: SerieResultado): numb
   if (varX === 0 || varY === 0) return null
   return cov / Math.sqrt(varX * varY)
 }
+
+/** Descreve em português a força e o sentido de um coeficiente de correlação de Pearson. */
+export function interpretarCorrelacao(r: number): string {
+  const sentido = r >= 0 ? 'no mesmo sentido' : 'em sentidos opostos'
+  const forca = Math.abs(r)
+  if (forca >= 0.7) return `forte, ${sentido}`
+  if (forca >= 0.3) return `moderada, ${sentido}`
+  if (forca >= 0.1) return `fraca, ${sentido}`
+  return 'praticamente nula'
+}

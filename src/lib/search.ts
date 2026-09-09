@@ -1,6 +1,6 @@
 import { CATALOGO } from '../data/catalog'
 import type { SearchMatch } from '../types'
-import { normalize, tokenize } from './normalize'
+import { distanciaEdicao, normalize, tokenize } from './normalize'
 
 const PESOS = {
   correspondenciaExata: 100,
@@ -9,7 +9,20 @@ const PESOS = {
   descricao: 30,
   categoria: 20,
   fonte: 10,
+  aproximado: 15,
 } as const
+
+// Erro de digitação só é tolerado a partir desse tamanho de termo — palavras curtas têm
+// distância de edição 1 para várias outras palavras não relacionadas (ruído).
+const TAMANHO_MINIMO_PARA_TOLERANCIA = 5
+
+/** Termo bate por aproximação (distância de edição ≤ 1) com alguma palavra do texto. */
+function casaPorAproximacao(termo: string, textoNorm: string): boolean {
+  if (termo.length < TAMANHO_MINIMO_PARA_TOLERANCIA) return false
+  return textoNorm
+    .split(' ')
+    .some((palavra) => Math.abs(palavra.length - termo.length) <= 1 && distanciaEdicao(termo, palavra) <= 1)
+}
 
 /**
  * Motor de busca determinístico: normaliza, tokeniza, casa contra
@@ -78,6 +91,14 @@ export function buscarIndicadores(consulta: string): SearchMatch[] {
         score += PESOS.fonte
         termosCasados++
         motivos.push(`"${termo}" corresponde ao tema ou fonte`)
+        continue
+      }
+
+      // Nenhuma correspondência exata: tenta tolerar um pequeno erro de digitação.
+      if (casaPorAproximacao(termo, nomeNorm) || sinonimosNorm.some((s) => casaPorAproximacao(termo, s))) {
+        score += PESOS.aproximado
+        termosCasados++
+        motivos.push(`"${termo}" é parecido com um termo do indicador (possível erro de digitação)`)
       }
     }
 

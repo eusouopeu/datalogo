@@ -51,3 +51,9 @@ export function listarChavesOffline(): string[] {
   }
   return chaves
 }
+
+/** Extrai o id do indicador de uma chave gerada por `chaveCache` (formato `serie:<id>:<selecao-json>`). */
+export function indicadorIdDaChave(chave: string): string | null {
+  const partes = chave.split(':')
+  return partes.length >= 2 ? partes[1] : null
+}

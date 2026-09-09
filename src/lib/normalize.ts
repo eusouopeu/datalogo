@@ -18,6 +18,25 @@ export function singularize(word: string): string {
   return word
 }
 
+/**
+ * Distância de edição (Levenshtein) entre duas strings — usada para tolerar erros de
+ * digitação na busca. Sem limite de corte: strings de busca são curtas (uma palavra).
+ */
+export function distanciaEdicao(a: string, b: string): number {
+  const linhas = a.length + 1
+  const colunas = b.length + 1
+  const dp: number[][] = Array.from({ length: linhas }, () => new Array(colunas).fill(0))
+  for (let i = 0; i < linhas; i++) dp[i][0] = i
+  for (let j = 0; j < colunas; j++) dp[0][j] = j
+  for (let i = 1; i < linhas; i++) {
+    for (let j = 1; j < colunas; j++) {
+      const custo = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + custo)
+    }
+  }
+  return dp[a.length][b.length]
+}
+
 export function tokenize(text: string): string[] {
   return normalize(text)
     .split(' ')

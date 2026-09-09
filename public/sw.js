@@ -1,7 +1,7 @@
 // Service worker do shell do app: cacheia estático same-origin, deixa chamadas às APIs
 // públicas (IBGE/BCB/SICONFI/Comex Stat) passarem direto pela rede — quem cacheia dados
 // de série é o localStorage (ver src/lib/cache.ts), não o service worker.
-const CACHE = 'datalogo-shell-v1'
+const CACHE = 'datalogo-shell-v2'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
