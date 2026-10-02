@@ -1,4 +1,4 @@
-import { estaExpirado, gravarCache, lerCache } from './cache'
+import { estaExpirado, gravar, ler } from './armazenamento'
 
 export interface Localidade {
   id: string
@@ -22,14 +22,14 @@ interface MunicipioApi {
 }
 
 async function buscarComCache<T>(chave: string, url: string): Promise<T> {
-  const cache = lerCache<T>(chave)
+  const cache = ler<T>(chave)
   if (cache && !estaExpirado(cache, TTL_LOCALIDADES)) return cache.valor
 
   try {
     const resposta = await fetch(url)
     if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`)
     const dados: T = await resposta.json()
-    gravarCache(chave, dados)
+    gravar(chave, dados)
     return dados
   } catch (erro) {
     if (cache) return cache.valor // API fora do ar: usa cache expirado como fallback

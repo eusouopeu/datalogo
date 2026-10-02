@@ -69,6 +69,7 @@ export async function buscarSerie(
           .sort((a, b) => a.periodo.localeCompare(b.periodo))
         resultados.push({
           localidadeNome: serieItem.localidade.nome,
+          localidadeCodigo: serieItem.localidade.id,
           categoriaLabels,
           pontos,
         })

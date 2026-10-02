@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FacetSelection, Indicador, SerieResultado } from '../types'
 import { buscarSerieIndicador } from './dados'
-import { estaExpirado, gravarCache, lerCache, ttlPorPeriodicidade } from './cache'
-import { lerOffline } from './offline'
+import { estaExpirado, estaFixado, gravar, ler, ttlPorPeriodicidade } from './armazenamento'
 
 export function chaveCache(indicador: Indicador, selecao: FacetSelection): string {
   return `serie:${indicador.id}:${JSON.stringify(selecao)}`
+}
+
+/** Extrai o id do indicador de uma chave gerada por `chaveCache` (formato `serie:<id>:<selecao-json>`). */
+export function indicadorIdDaChave(chave: string): string | null {
+  const partes = chave.split(':')
+  return partes.length >= 2 ? partes[1] : null
 }
 
 /** Mensagem de erro identificando a fonte (IBGE/BCB/SICONFI/Comex Stat) que falhou, para o usuário saber o que está fora do ar. */
@@ -24,7 +29,7 @@ export interface EstadoSerie {
   consultadoEm: number | null
   /** true quando a revalidação falhou (ex: sem rede) mas os dados em tela vêm do cache local. */
   desatualizado: boolean
-  /** true quando os dados em tela vêm do armazenamento offline explícito (nem cache SWR fresco, nem rede disponível). */
+  /** true quando os dados em tela vêm de entrada fixada para uso offline. */
   deOffline: boolean
   recarregar: () => void
 }
@@ -56,7 +61,7 @@ export function useSerie(indicador: Indicador | null, selecao: FacetSelection | 
       return
     }
 
-    const cache = lerCache<SerieResultado[]>(chave)
+    const cache = ler<SerieResultado[]>(chave)
     if (cache) {
       setSeries(cache.valor)
       setConsultadoEm(cache.timestamp)
@@ -77,25 +82,20 @@ export function useSerie(indicador: Indicador | null, selecao: FacetSelection | 
         if (cancelado) return
         setSeries(res)
         setConsultadoEm(Date.now())
-        gravarCache(chave, res)
+        gravar(chave, res)
         setErro(null)
         setDesatualizado(false)
       })
       .catch((e) => {
         if (cancelado) return
         if (!cache) {
-          const offline = lerOffline<SerieResultado[]>(chave)
-          if (offline) {
-            setSeries(offline.valor)
-            setConsultadoEm(offline.timestamp)
-            setDeOffline(true)
-            setErro(null)
-          } else {
-            setErro(mensagemErro(indicador.fonte, e))
-          }
+          setErro(mensagemErro(indicador.fonte, e))
         }
-        // com cache exibido em tela, a revalidação falhou em silêncio — mantém o que já foi mostrado, mas avisa que está desatualizado
-        else setDesatualizado(true)
+        // com dado em tela, a revalidação falhou em silêncio — mantém o que foi mostrado e avisa que está desatualizado
+        else {
+          setDesatualizado(!estaFixado(chave))
+          setDeOffline(estaFixado(chave))
+        }
       })
       .finally(() => {
         if (!cancelado) setCarregando(false)

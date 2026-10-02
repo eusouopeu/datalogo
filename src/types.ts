@@ -83,6 +83,8 @@ export interface FacetSelection {
 
 export interface SerieResultado {
   localidadeNome: string
+  /** código IBGE da localidade, quando a fonte informa (usado pelo mapa por UF) */
+  localidadeCodigo?: string
   categoriaLabels: string[]
   pontos: { periodo: string; valor: number | null }[]
 }

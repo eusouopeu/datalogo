@@ -16,7 +16,7 @@ import {
 } from 'recharts'
 import type { Indicador, SerieResultado } from '../types'
 import { SingleSelectDropdown } from './ui/Dropdown'
-import { aplicarTransformacao, OPCOES_TRANSFORMACAO, type Transformacao } from '../lib/transformacoes'
+import { aplicarTransformacao, opcoesTransformacao, type Transformacao } from '../lib/transformacoes'
 import { eventosNoIntervalo } from '../lib/eventos'
 
 interface Props {
@@ -40,9 +40,7 @@ export function ChartView({ series, unidade, periodicidade, mostrarEventos }: Pr
   const [tipo, setTipo] = useState<TipoGrafico>('linha')
   const [transformacao, setTransformacao] = useState<Transformacao>('nenhuma')
 
-  // Acumulado 12m só faz sentido para variação mensal (%) — outras periodicidades ficam só com média móvel.
-  const opcoesTransformacao =
-    periodicidade === 'mensal' ? OPCOES_TRANSFORMACAO : OPCOES_TRANSFORMACAO.filter((o) => o.valor !== 'acumulado12m')
+  const opcoesCalculo = opcoesTransformacao(periodicidade)
   const seriesTransformadas = series.map((s) => aplicarTransformacao(s, transformacao))
 
   const periodos = Array.from(new Set(seriesTransformadas.flatMap((s) => s.pontos.map((p) => p.periodo)))).sort()
@@ -64,21 +62,16 @@ export function ChartView({ series, unidade, periodicidade, mostrarEventos }: Pr
   const ComponenteGrafico = tipo === 'barra' ? BarChart : tipo === 'area' ? AreaChart : LineChart
   const unidadeGrafico = transformacao === 'nenhuma' ? unidade : '%'
 
-  const eventos = mostrarEventos
-    ? eventosNoIntervalo(periodos).map((evento) => ({
-        ...evento,
-        periodo: periodos.find((p) => p.startsWith(evento.ano))!,
-      }))
-    : []
+  const eventos = mostrarEventos ? eventosNoIntervalo(periodos, periodicidade) : []
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap justify-end gap-2">
-        {opcoesTransformacao.length > 1 && (
-          <div className="w-44">
+        {opcoesCalculo.length > 1 && (
+          <div className="w-48">
             <SingleSelectDropdown
               label="Cálculo"
-              opcoes={opcoesTransformacao}
+              opcoes={opcoesCalculo}
               valor={transformacao}
               onChange={setTransformacao}
             />
@@ -98,7 +91,7 @@ export function ChartView({ series, unidade, periodicidade, mostrarEventos }: Pr
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {eventos.map((evento) => (
               <ReferenceLine
-                key={evento.ano}
+                key={evento.inicio}
                 x={evento.periodo}
                 stroke="#94a3b8"
                 strokeDasharray="4 4"

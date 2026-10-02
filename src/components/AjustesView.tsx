@@ -1,7 +1,13 @@
-import { HardDriveDownload, Trash2 } from 'lucide-react'
+import { Eraser, HardDriveDownload, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CATALOGO } from '../data/catalog'
-import { indicadorIdDaChave, listarChavesOffline, removerOffline } from '../lib/offline'
+import {
+  limparNaoFixados,
+  listarChavesFixadas,
+  removerFixado,
+  tamanhoArmazenamentoBytes,
+} from '../lib/armazenamento'
+import { indicadorIdDaChave } from '../lib/useSerie'
 import type { Indicador } from '../types'
 
 interface ItemOffline {
@@ -10,7 +16,7 @@ interface ItemOffline {
 }
 
 function carregarItensOffline(): ItemOffline[] {
-  return listarChavesOffline()
+  return listarChavesFixadas()
     .map((chave) => {
       const indicador = CATALOGO.find((i) => i.id === indicadorIdDaChave(chave))
       return indicador ? { chave, indicador } : null
@@ -18,26 +24,55 @@ function carregarItensOffline(): ItemOffline[] {
     .filter((item): item is ItemOffline => item !== null)
 }
 
-/** Aba Ajustes: gerencia o que foi salvo para uso offline, além das informações sobre fontes de dados. */
+function formatarTamanho(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} KB`
+  return `${(bytes / (1024 * 1024)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+}
+
+/** Aba Ajustes: espaço ocupado, limpeza do cache, dados fixados para uso offline e fontes. */
 export function AjustesView() {
   const [itens, setItens] = useState<ItemOffline[]>(() => carregarItensOffline())
+  const [tamanho, setTamanho] = useState(() => tamanhoArmazenamentoBytes())
 
   useEffect(() => {
     setItens(carregarItensOffline())
+    setTamanho(tamanhoArmazenamentoBytes())
   }, [])
 
   function remover(chave: string) {
-    removerOffline(chave)
+    removerFixado(chave)
     setItens((atuais) => atuais.filter((item) => item.chave !== chave))
+    setTamanho(tamanhoArmazenamentoBytes())
   }
 
   function removerTudo() {
-    itens.forEach((item) => removerOffline(item.chave))
+    itens.forEach((item) => removerFixado(item.chave))
     setItens([])
+    setTamanho(tamanhoArmazenamentoBytes())
+  }
+
+  function limparCache() {
+    limparNaoFixados()
+    setTamanho(tamanhoArmazenamentoBytes())
   }
 
   return (
     <div className="flex flex-col gap-6 text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex items-center justify-between gap-2">
+        <p>
+          Dados guardados no dispositivo: <span className="font-medium text-slate-700 dark:text-slate-300">{formatarTamanho(tamanho)}</span>
+        </p>
+        <button
+          onClick={limparCache}
+          aria-label="Limpar cache (mantém o que está salvo para uso offline)"
+          title="Limpar cache (mantém o que está salvo para uso offline)"
+          className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+        >
+          <Eraser size={16} />
+        </button>
+      </div>
+
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">

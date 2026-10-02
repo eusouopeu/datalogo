@@ -30,7 +30,25 @@ roda localmente no navegador/app, em TypeScript.
 5. **Análises locais** ([src/lib/analysis.ts](src/lib/analysis.ts)) — descrever
    (média, mediana, desvio-padrão…), comparar/ranking e evolução (variação,
    CAGR), tudo calculado no dispositivo.
-6. **Tema claro/escuro** ([src/lib/theme.ts](src/lib/theme.ts)) — segue o
+6. **Leitura automática** ([src/lib/leitura.ts](src/lib/leitura.ts)) — frases em
+   português geradas por regra (último valor, variação sobre o período anterior,
+   extremo da janela e posição frente à média), exibidas acima do gráfico. Sem IA:
+   é cálculo determinístico sobre os pontos da série.
+7. **Mapa por UF** ([src/components/MapaUf.tsx](src/components/MapaUf.tsx)) — mapa
+   coroplético desenhado a partir da malha oficial do IBGE
+   ([src/lib/malhaUf.ts](src/lib/malhaUf.ts)), projetada em SVG no próprio app, sem
+   biblioteca de mapas. Aparece como visualização quando a consulta é por UF.
+8. **Salvos** ([src/lib/salvos.ts](src/lib/salvos.ts)) — lista única de indicador +
+   filtros (substitui os antigos "favoritos" e "painéis"). Um item salvo pode ser
+   fixado para aparecer nos destaques da tela inicial e no widget do Android.
+9. **Aviso de dado novo** ([src/lib/novidades.ts](src/lib/novidades.ts)) — compara o
+   último período devolvido pela API com o último já visto pelo usuário e marca um
+   ponto verde no card. Sem servidor e sem push.
+10. **Armazenamento local único** ([src/lib/armazenamento.ts](src/lib/armazenamento.ts)) —
+   cache SWR e "salvar para uso offline" são o mesmo mecanismo: a entrada fixada
+   nunca é purgada por idade nem apagada ao limpar o cache. A aba Ajustes mostra o
+   espaço ocupado e permite limpar.
+11. **Tema claro/escuro** ([src/lib/theme.ts](src/lib/theme.ts)) — segue o
    sistema por padrão, alternável pelo botão-ícone no cabeçalho e persistido
    em `localStorage`; aplicado antes do primeiro paint (script inline em
    [index.html](index.html)) para não piscar.
@@ -46,6 +64,11 @@ roda localmente no navegador/app, em TypeScript.
 - Taxa de câmbio — Dólar americano (venda)
 - Meta da taxa Selic definida pelo Copom
 - IGP-M — variação mensal
+- IBC-Br — atividade econômica (índice dessazonalizado)
+- PIB trimestral — índice dessazonalizado
+- Dívida bruta do governo geral (% do PIB)
+- Reservas internacionais
+- Inadimplência da carteira de crédito total
 
 Novos indicadores são adicionados como entradas no catálogo (nenhum código
 de UI precisa mudar) — ver a seção "Adicionando um indicador" abaixo.
@@ -123,6 +146,19 @@ A manutenção do catálogo é o único processo manual do projeto — o app nã
 tem backend, então atualizações de estrutura das APIs de origem são tratadas
 durante o desenvolvimento, gerando um novo catálogo que é publicado junto
 com o site estático.
+
+## Widget do Android
+
+Os arquivos nativos escritos à mão ficam em [native/android/](native/android) —
+a pasta `android/` é gerada pelo Capacitor e não entra no git. O script
+`npm run cap:sync` copia `native/android/` por cima de `android/` antes do sync.
+
+O app publica os indicadores fixados em `SharedPreferences` (via
+`@capacitor/preferences`, chave `datalogo-widget`) e um `AppWidgetProvider`
+([android/app/src/main/java/br/com/datalogo/app/DatalogoWidget.java](android/app/src/main/java/br/com/datalogo/app/DatalogoWidget.java))
+lê essa chave para desenhar o widget da tela inicial. O widget não faz rede:
+mostra o último valor que o app publicou, atualizado quando o app sai de foco
+e a cada ciclo do `updatePeriodMillis`.
 
 ## Stack
 

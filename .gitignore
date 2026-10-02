@@ -24,8 +24,8 @@ dist-ssr
 *.sw?
 
 # Capacitor native platforms (generated with `npx cap add`)
-ios
-android
+/ios
+/android
 
 # Local tooling config (dev-server preview helper)
 .claude/

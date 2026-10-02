@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Datálogo</string>
+    <string name="title_activity_main">Datálogo</string>
+    <string name="package_name">br.com.datalogo.app</string>
+    <string name="custom_url_scheme">br.com.datalogo.app</string>
+    <string name="widget_nome">Destaques do Datálogo</string>
+    <string name="widget_vazio">Abra o app e fixe indicadores para vê-los aqui.</string>
+</resources>

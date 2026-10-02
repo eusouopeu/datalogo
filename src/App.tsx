@@ -1,24 +1,32 @@
-import { Home, Moon, Settings, Star, Sun } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Bookmark, Home, Moon, Settings, Sun } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SearchBar } from './components/SearchBar'
 import { ResultsList } from './components/ResultsList'
 import { ExplorerView } from './components/ExplorerView'
 import { TaxonomyBrowser } from './components/TaxonomyBrowser'
-import { Destaques } from './components/Destaques'
-import { FavoritosRecentes } from './components/FavoritosRecentes'
+import { Destaques, type ValorDestaque } from './components/Destaques'
+import { SalvosRecentes } from './components/SalvosRecentes'
 import { AjustesView } from './components/AjustesView'
-import { PaineisSalvos } from './components/PaineisSalvos'
 import { buscarIndicadores } from './lib/search'
 import { useTheme } from './lib/theme'
 import { selecaoInicial } from './lib/facets'
 import { estadoParaParams, paramsParaEstado } from './lib/urlState'
-import { purgarCacheExpirado } from './lib/cache'
-import { alternarFavorito, listarFavoritos, listarRecentes, registrarRecente } from './lib/favoritos'
-import type { Painel } from './lib/paineis'
+import { migrarArmazenamentoAntigo, purgarExpirado } from './lib/armazenamento'
+import {
+  alternarFixadoHome,
+  alternarSalvo,
+  listarRecentes,
+  listarSalvos,
+  migrarSalvosAntigos,
+  registrarRecente,
+  removerSalvo,
+  type Salvo,
+} from './lib/salvos'
+import { publicarWidget, type ItemWidget } from './lib/widget'
 import type { FacetSelection, Indicador } from './types'
 import { CATALOGO } from './data/catalog'
 
-type Tela = 'busca' | 'favoritos' | 'ajustes' | 'explorar'
+type Tela = 'busca' | 'salvos' | 'ajustes' | 'explorar'
 
 interface EstadoNavegacao {
   tela: Tela
@@ -28,9 +36,9 @@ interface EstadoNavegacao {
 
 const IDADE_MAXIMA_CACHE = 30 * 24 * 60 * 60 * 1000 // 30 dias
 
-const ABAS_NAVEGACAO: { id: Extract<Tela, 'busca' | 'favoritos' | 'ajustes'>; icone: typeof Home; label: string }[] = [
+const ABAS_NAVEGACAO: { id: Extract<Tela, 'busca' | 'salvos' | 'ajustes'>; icone: typeof Home; label: string }[] = [
   { id: 'busca', icone: Home, label: 'Início' },
-  { id: 'favoritos', icone: Star, label: 'Favoritos' },
+  { id: 'salvos', icone: Bookmark, label: 'Salvos' },
   { id: 'ajustes', icone: Settings, label: 'Ajustes' },
 ]
 
@@ -42,18 +50,32 @@ function lerTelaDaUrl(): EstadoNavegacao {
   return { tela: 'busca', indicador: null, selecao: null }
 }
 
+/** Seleção padrão de um indicador pelo id — usada na migração dos favoritos antigos. */
+function selecaoPadraoDoId(indicadorId: string): FacetSelection {
+  const indicador = CATALOGO.find((i) => i.id === indicadorId)
+  return indicador
+    ? selecaoInicial(indicador)
+    : { nivelTerritorial: 'N1', codigosTerritoriais: [], categorias: {}, quantidadePeriodos: 8 }
+}
+
 export default function App() {
   const [consulta, setConsulta] = useState('')
   const [navegacao, setNavegacao] = useState<EstadoNavegacao>(() => lerTelaDaUrl())
   const { tema, alternar } = useTheme()
   const navegouNestaSessao = useRef(false)
-  const [favoritos, setFavoritos] = useState<string[]>(() => listarFavoritos())
-  const [recentes, setRecentes] = useState<string[]>(() => listarRecentes())
+  const [salvos, setSalvos] = useState<Salvo[]>([])
+  const [recentes, setRecentes] = useState<string[]>([])
+  const valoresWidget = useRef(new Map<string, ItemWidget>())
 
   const resultados = useMemo(() => buscarIndicadores(consulta), [consulta])
 
+  // Migrações de formato (cache/offline e favoritos/painéis) antes de qualquer leitura de estado salvo.
   useEffect(() => {
-    purgarCacheExpirado(IDADE_MAXIMA_CACHE)
+    migrarArmazenamentoAntigo()
+    migrarSalvosAntigos(selecaoPadraoDoId)
+    purgarExpirado(IDADE_MAXIMA_CACHE)
+    setSalvos(listarSalvos())
+    setRecentes(listarRecentes())
   }, [])
 
   // Sincroniza com o botão físico de voltar (Android) / histórico do navegador.
@@ -65,6 +87,22 @@ export default function App() {
     return () => window.removeEventListener('popstate', aoNavegarHistorico)
   }, [])
 
+  const idsFixados = useMemo(
+    () => salvos.filter((s) => s.fixadoHome).sort((a, b) => a.criadoEm - b.criadoEm).map((s) => s.indicadorId),
+    [salvos],
+  )
+
+  /** Acumula os valores dos destaques e publica no widget nativo, na ordem exibida. */
+  const registrarValorDestaque = useCallback(
+    (valor: ValorDestaque) => {
+      valoresWidget.current.set(valor.indicadorId, { nome: valor.nome, valor: valor.valor, periodo: valor.periodo })
+      const ordem = idsFixados.length > 0 ? idsFixados : Array.from(valoresWidget.current.keys())
+      const itens = ordem.map((id) => valoresWidget.current.get(id)).filter((i): i is ItemWidget => !!i)
+      if (itens.length > 0) void publicarWidget(itens)
+    },
+    [idsFixados],
+  )
+
   function navegarPara(indicador: Indicador, selecao: FacetSelection) {
     setNavegacao({ tela: 'explorar', indicador, selecao })
     navegouNestaSessao.current = true
@@ -75,11 +113,6 @@ export default function App() {
 
   function abrirIndicador(indicador: Indicador) {
     navegarPara(indicador, selecaoInicial(indicador))
-  }
-
-  function abrirPainel(painel: Painel) {
-    const indicador = CATALOGO.find((i) => i.id === painel.indicadorId)
-    if (indicador) navegarPara(indicador, painel.selecao)
   }
 
   function atualizarSelecao(nova: FacetSelection) {
@@ -100,6 +133,7 @@ export default function App() {
   }
 
   const abaAtiva = navegacao.tela !== 'explorar' ? navegacao.tela : null
+  const indicadoresSalvos = useMemo(() => new Set(salvos.map((s) => s.indicadorId)), [salvos])
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col">
@@ -125,23 +159,29 @@ export default function App() {
               <ResultsList
                 resultados={resultados}
                 consulta={consulta}
-                favoritos={favoritos}
+                favoritos={Array.from(indicadoresSalvos)}
                 onExplorar={(match) => abrirIndicador(match.indicador)}
-                onAlternarFavorito={(id) => setFavoritos(alternarFavorito(id))}
+                onAlternarFavorito={(id) => setSalvos(alternarSalvo(id, selecaoPadraoDoId(id)))}
               />
             )}
             {!consulta && (
               <div className="flex flex-col gap-6">
-                <Destaques onExplorar={abrirIndicador} />
-                <PaineisSalvos onAbrir={abrirPainel} />
+                <Destaques ids={idsFixados} onExplorar={abrirIndicador} onValor={registrarValorDestaque} />
                 <TaxonomyBrowser onSelecionar={abrirIndicador} />
               </div>
             )}
           </div>
         )}
 
-        {navegacao.tela === 'favoritos' && (
-          <FavoritosRecentes favoritos={favoritos} recentes={recentes} onExplorar={abrirIndicador} />
+        {navegacao.tela === 'salvos' && (
+          <SalvosRecentes
+            salvos={salvos}
+            recentes={recentes}
+            onAbrir={navegarPara}
+            onExplorar={abrirIndicador}
+            onAlternarFixado={(id) => setSalvos(alternarFixadoHome(id))}
+            onRemover={(id) => setSalvos(removerSalvo(id))}
+          />
         )}
 
         {navegacao.tela === 'ajustes' && <AjustesView />}
@@ -152,8 +192,10 @@ export default function App() {
             selecao={navegacao.selecao}
             onSelecaoChange={atualizarSelecao}
             onVoltar={voltarParaBusca}
-            favorito={favoritos.includes(navegacao.indicador.id)}
-            onAlternarFavorito={() => setFavoritos(alternarFavorito(navegacao.indicador!.id))}
+            salvo={indicadoresSalvos.has(navegacao.indicador.id)}
+            onAlternarSalvo={() =>
+              setSalvos(alternarSalvo(navegacao.indicador!.id, navegacao.selecao ?? selecaoPadraoDoId(navegacao.indicador!.id)))
+            }
           />
         )}
       </div>

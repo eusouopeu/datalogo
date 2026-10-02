@@ -1,12 +1,27 @@
-import type { SerieResultado } from '../types'
+import type { Indicador, SerieResultado } from '../types'
 
 export type Transformacao = 'nenhuma' | 'acumulado12m' | 'mediaMovel3'
 
-export const OPCOES_TRANSFORMACAO: { valor: Transformacao; label: string }[] = [
-  { valor: 'nenhuma', label: 'Valor mensal' },
-  { valor: 'acumulado12m', label: 'Acumulado 12 meses' },
-  { valor: 'mediaMovel3', label: 'Média móvel (3m)' },
-]
+export interface OpcaoTransformacao {
+  valor: Transformacao
+  label: string
+}
+
+/**
+ * Opções de cálculo válidas para a periodicidade da série. Acumulado em 12 meses só faz
+ * sentido em variação mensal; média móvel de 3 períodos, em séries mensais ou diárias.
+ * Série trimestral/anual fica só com o valor original (o seletor nem aparece).
+ */
+export function opcoesTransformacao(periodicidade: Indicador['periodicidade']): OpcaoTransformacao[] {
+  const opcoes: OpcaoTransformacao[] = [{ valor: 'nenhuma', label: 'Valor original' }]
+  if (periodicidade === 'mensal') {
+    opcoes.push({ valor: 'acumulado12m', label: 'Acumulado 12 meses' })
+    opcoes.push({ valor: 'mediaMovel3', label: 'Média móvel (3 meses)' })
+  } else if (periodicidade === 'diaria') {
+    opcoes.push({ valor: 'mediaMovel3', label: 'Média móvel (3 dias)' })
+  }
+  return opcoes
+}
 
 /** Aplica transformação de série temporal, preservando localidade/categoria — só o valor muda. */
 export function aplicarTransformacao(serie: SerieResultado, transformacao: Transformacao): SerieResultado {

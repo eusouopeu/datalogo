@@ -1,34 +1,51 @@
-import { ArrowLeft, BookmarkPlus, Check, Download, Flag, HardDriveDownload, ImageDown, LineChart, RefreshCw, Sigma, Star, Table2, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
+  Download,
+  Flag,
+  HardDriveDownload,
+  ImageDown,
+  LineChart,
+  Map,
+  RefreshCw,
+  Sigma,
+  Table2,
+  Trash2,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { FacetSelection, Indicador } from '../types'
+import type { FacetSelection, Indicador, SerieResultado } from '../types'
 import { QueryBuilder } from './QueryBuilder'
 import { QueryTranslation } from './QueryTranslation'
 import { DataTable } from './DataTable'
 import { ChartView } from './ChartView'
+import { MapaUf } from './MapaUf'
+import { Leitura } from './Leitura'
 import { AnalysisPanel } from './AnalysisPanel'
 import { CompareInline } from './CompareInline'
 import { chaveCache, useSerie } from '../lib/useSerie'
 import { serieParaCsv } from '../lib/csv'
 import { salvarCsv, salvarImagemPng, svgParaPngDataUrl } from '../lib/exportar'
 import { estadoParaParams } from '../lib/urlState'
-import { salvarPainel } from '../lib/paineis'
 import { compararUltimoValor } from '../lib/analysis'
-import { lerOffline, removerOffline, salvarOffline } from '../lib/offline'
-import type { SerieResultado } from '../types'
+import { estaFixado, fixar, removerFixado } from '../lib/armazenamento'
+import { marcarVisto, registrarUltimoPeriodo } from '../lib/novidades'
+import { formatarPeriodo } from '../lib/leitura'
 
 interface Props {
   indicador: Indicador
   selecao: FacetSelection
   onSelecaoChange: (selecao: FacetSelection) => void
   onVoltar: () => void
-  favorito: boolean
-  onAlternarFavorito: () => void
+  salvo: boolean
+  onAlternarSalvo: () => void
 }
 
-type Visualizacao = 'grafico' | 'tabela' | 'analise'
+type Visualizacao = 'grafico' | 'tabela' | 'analise' | 'mapa'
 
 const VISUALIZACOES: { id: Visualizacao; icone: typeof LineChart; label: string }[] = [
   { id: 'grafico', icone: LineChart, label: 'Gráfico' },
+  { id: 'mapa', icone: Map, label: 'Mapa por estado' },
   { id: 'tabela', icone: Table2, label: 'Tabela' },
   { id: 'analise', icone: Sigma, label: 'Análise' },
 ]
@@ -65,10 +82,9 @@ function RankingResumo({ series, unidade }: { series: SerieResultado[]; unidade:
   )
 }
 
-export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, favorito, onAlternarFavorito }: Props) {
+export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, salvo, onAlternarSalvo }: Props) {
   const [visualizacao, setVisualizacao] = useState<Visualizacao>('grafico')
   const [exportando, setExportando] = useState(false)
-  const [painelSalvo, setPainelSalvo] = useState(false)
   const [mostrarEventos, setMostrarEventos] = useState(false)
 
   const nivelInfo = indicador.niveisTerritoriais.find((n) => n.nivel === selecao.nivelTerritorial)
@@ -81,19 +97,27 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
   )
 
   const chaveOffline = chaveCache(indicador, selecao)
-  const [salvoOffline, setSalvoOffline] = useState(() => lerOffline(chaveOffline) !== null)
+  const [salvoOffline, setSalvoOffline] = useState(() => estaFixado(chaveOffline))
 
   useEffect(() => {
-    setSalvoOffline(lerOffline(chaveOffline) !== null)
+    setSalvoOffline(estaFixado(chaveOffline))
   }, [chaveOffline])
+
+  const ultimoPeriodo = series ? ultimoPeriodoDisponivel(series) : null
+
+  // Aviso de dado novo: registra o período que a API devolveu e zera o aviso deste indicador.
+  useEffect(() => {
+    if (ultimoPeriodo) registrarUltimoPeriodo(indicador.id, ultimoPeriodo)
+    marcarVisto(indicador.id)
+  }, [indicador.id, ultimoPeriodo])
 
   function alternarOffline() {
     if (salvoOffline) {
-      removerOffline(chaveOffline)
+      removerFixado(chaveOffline)
       setSalvoOffline(false)
     } else if (series) {
-      salvarOffline(chaveOffline, series)
-      setSalvoOffline(true)
+      fixar(chaveOffline)
+      setSalvoOffline(estaFixado(chaveOffline))
     }
   }
 
@@ -120,14 +144,13 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
     }
   }
 
-  function salvarComoPainel() {
-    salvarPainel(indicador.nome, indicador.id, selecao)
-    setPainelSalvo(true)
-    setTimeout(() => setPainelSalvo(false), 1500)
-  }
-
   const linkCompartilhavel = `${window.location.origin}${window.location.pathname}?${estadoParaParams({ indicadorId: indicador.id, selecao })}`
-  const ultimoPeriodo = series ? ultimoPeriodoDisponivel(series) : null
+
+  // O mapa só existe para consulta por UF com código de localidade na resposta.
+  const temMapa =
+    selecao.nivelTerritorial === 'N3' && (series ?? []).some((s) => s.localidadeCodigo && s.localidadeCodigo.length === 2)
+  const visualizacoesDisponiveis = VISUALIZACOES.filter((v) => v.id !== 'mapa' || temMapa)
+  const visualizacaoAtiva = visualizacao === 'mapa' && !temMapa ? 'grafico' : visualizacao
 
   return (
     <div className="flex flex-col gap-5 text-left">
@@ -142,20 +165,12 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
         </button>
         <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">{indicador.nome}</h2>
         <button
-          onClick={onAlternarFavorito}
-          aria-label={favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-          title={favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          onClick={onAlternarSalvo}
+          aria-label={salvo ? 'Remover dos salvos' : 'Salvar indicador com estes filtros'}
+          title={salvo ? 'Remover dos salvos' : 'Salvar indicador com estes filtros'}
           className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
         >
-          <Star size={20} className={favorito ? 'fill-amber-400 text-amber-400' : ''} />
-        </button>
-        <button
-          onClick={salvarComoPainel}
-          aria-label={painelSalvo ? 'Painel salvo' : 'Salvar como painel'}
-          title={painelSalvo ? 'Painel salvo' : 'Salvar como painel'}
-          className="shrink-0 rounded-md p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          {painelSalvo ? <Check size={20} className="text-emerald-600" /> : <BookmarkPlus size={20} />}
+          {salvo ? <BookmarkCheck size={20} className="text-emerald-600 dark:text-emerald-400" /> : <Bookmark size={20} />}
         </button>
       </div>
 
@@ -183,16 +198,18 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
 
       {series && series.length > 0 && (
         <>
+          {series.length === 1 && <Leitura serie={series[0]} indicador={indicador} />}
+
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-1 rounded-lg border border-slate-200 p-1 dark:border-slate-800">
-              {VISUALIZACOES.map(({ id, icone: Icone, label }) => (
+              {visualizacoesDisponiveis.map(({ id, icone: Icone, label }) => (
                 <button
                   key={id}
                   onClick={() => setVisualizacao(id)}
                   aria-label={label}
                   title={label}
                   className={`rounded-md p-2 ${
-                    visualizacao === id
+                    visualizacaoAtiva === id
                       ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900'
                       : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
@@ -202,7 +219,7 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
               ))}
             </div>
             <div className="flex flex-row gap-2">
-              {visualizacao === 'grafico' && (
+              {visualizacaoAtiva === 'grafico' && (
                 <button
                   onClick={exportarPng}
                   disabled={exportando}
@@ -237,7 +254,7 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
             </div>
           </div>
 
-          {visualizacao === 'grafico' && (
+          {visualizacaoAtiva === 'grafico' && (
             <ChartView
               series={series}
               unidade={indicador.unidade}
@@ -245,14 +262,15 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
               mostrarEventos={mostrarEventos}
             />
           )}
-          {visualizacao === 'tabela' && <DataTable series={series} unidade={indicador.unidade} />}
-          {visualizacao === 'analise' && <AnalysisPanel series={series} unidade={indicador.unidade} />}
+          {visualizacaoAtiva === 'mapa' && <MapaUf series={series} unidade={indicador.unidade} />}
+          {visualizacaoAtiva === 'tabela' && <DataTable series={series} unidade={indicador.unidade} />}
+          {visualizacaoAtiva === 'analise' && <AnalysisPanel series={series} unidade={indicador.unidade} />}
 
-          {visualizacao === 'grafico' && <RankingResumo series={series} unidade={indicador.unidade} />}
+          {visualizacaoAtiva === 'grafico' && <RankingResumo series={series} unidade={indicador.unidade} />}
 
           {(consultadoEm || ultimoPeriodo) && (
             <p className="text-xs text-slate-400">
-              {ultimoPeriodo && <>Último período disponível: {ultimoPeriodo}. </>}
+              {ultimoPeriodo && <>Último período disponível: {formatarPeriodo(ultimoPeriodo, indicador.periodicidade)}. </>}
               {consultadoEm && <>Consultado às {new Date(consultadoEm).toLocaleTimeString('pt-BR')}.</>}
               {desatualizado && (
                 <span className="ml-1 text-amber-600 dark:text-amber-400">
@@ -268,7 +286,7 @@ export function ExplorerView({ indicador, selecao, onSelecaoChange, onVoltar, fa
             </p>
           )}
 
-          {visualizacao === 'grafico' && series[0] && (
+          {visualizacaoAtiva === 'grafico' && series[0] && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setMostrarEventos((v) => !v)}
