@@ -2,13 +2,14 @@
 
 Quando ler: antes de mudar comportamento já decidido.
 Fonte de verdade para: o que já foi decidido no projeto (uma linha por decisão).
-Atualizado em: 31/10/2026.
+Atualizado em: 21/11/2026.
 
 Decisão nova entra no topo, com data e onde está detalhada. Decisão ainda em
 aberto fica em [pendencias.md](pendencias.md).
 
 | Data | Decisão | Detalhe em |
 |---|---|---|
+| 21/11/2026 | Dependências com pnpm, nas versões comuns a todos os apps; versão `AAAA.MM.DD-n` e APK `datalogo-<versionName>.apk` como nos outros apps | `../versoes-padrao.json`, `CLAUDE.md` |
 | 31/10/2026 | CI no GitHub roda tipos e testes em cada push e PR | `.github/workflows/ci.yml` |
 | 14/10/2026 | Documentação segue `../_shared/docs-standards.md` | `CLAUDE.md` |
 | 02/10/2026 | Favoritos e painéis viram uma lista única de salvos; destaques da tela inicial são os itens fixados | `src/lib/salvos.ts` |

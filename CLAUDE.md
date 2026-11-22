@@ -35,11 +35,14 @@ Exceções deste projeto:
   ("Recomendações refutadas").
 - Build do APK:
   ```bash
-  npm run cap:sync
-  cd android && ./gradlew assembleDebug && cd ..
-  cp android/app/build/outputs/apk/debug/app-debug.apk datalogo-debug.apk
+  pnpm cap:sync
+  cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug && cd ..
+  cp android/app/build/outputs/apk/debug/app-debug.apk datalogo-<versionName>.apk
   ```
-  O APK fica em `datalogo-debug.apk`, na raiz (ignorado pelo git).
+  Versão em `android/app/build.gradle` (`versionCode` + `versionName`
+  `AAAA.MM.DD-n`); a pasta `android/` não é versionada, então a versão só
+  existe nesta máquina. O APK fica na raiz como `datalogo-<versionName>.apk`
+  (ignorado pelo git; apagar o anterior). Dependências com `pnpm install`.
 
 ## Fim de sessão
 
